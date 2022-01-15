@@ -27,17 +27,6 @@ package: war deb rpm suse osx
 
 publish: war.publish deb.publish rpm.publish suse.publish osx.publish
 
-test: deb.test rpm.test suse.test
-
-docker.images:
-	docker build -t jenkins-packaging-builder:$PACKAGE_BUILDER_VERSION ./docker
-	bash ./docker/build-sudo-images.sh
-
-# See ./docker/README.md for how to use the docker containers to run a build in docker
-
-docker.test: docker.images
-	bash ./installtests/run_tests.sh
-
 war: ${WAR}
 war.publish: ${WAR}
 	./war/publish/publish.sh
@@ -77,23 +66,3 @@ ${CLI}:
 	@mkdir ${TARGET} || true
 	wget -O $@.tmp ${JENKINS_URL}jnlpJars/jenkins-cli.jar
 	mv $@.tmp $@
-
-
-
-test.local.setup:
-	# start a test Apache server that acts as package server
-	# we'll refer to this as 'test.pkg.jenkins.io'
-	@mkdir -p ${TESTDIR} || true
-	docker run --rm -t -i -p 9200:80 -v ${TESTDIR}:/var/www/html fedora/apache
-%.test.up:
-	# run this target for to set up the test target VM
-	cd test; vagrant up --provision-with "" $*
-	cd test; vagrant provision --provision-with "shell" $*; sleep 5
-%.test.run:
-	# run this target to just re-run the test against the currently running VM
-	cd test; vagrant provision --provision-with serverspec $*
-%.test.destroy:
-	# run tis target to undo '%.test.up'
-	cd test; vagrant destroy -f $*
-%.test: %.test.up %.test.run %.test.destroy
-	# run all the test goals in the order
